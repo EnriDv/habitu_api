@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Habitu.Domain.Entities;
+using Habitu.Domain.Enums;
 using Habitu.Application.Abstractions;
 
 namespace Habitu.Infrastructure.Data;

@@ -5,7 +5,10 @@ using Habitu.Application;
 using Habitu.Infrastructure;
 using Habitu.Api.Middleware;
 
+DotNetEnv.Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -14,7 +17,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var jwtSecret = builder.Configuration["Supabase:JwtSecret"] ?? "a_fallback_extremely_long_jwt_secret_for_local_development";
 var jwtIssuer = builder.Configuration["Supabase:JwtIssuer"] ?? $"{builder.Configuration["Supabase:Url"]}/auth/v1";
 
 builder.Services.AddAuthentication(options =>
@@ -24,10 +26,10 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.TokenValidationParameters = new TokenValidationParameters
+    options.Authority = jwtIssuer;
+        options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
         ValidateIssuer = true,
         ValidIssuer = jwtIssuer,
         ValidateAudience = true,
@@ -55,3 +57,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

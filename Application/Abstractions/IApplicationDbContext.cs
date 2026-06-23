@@ -14,6 +14,9 @@ public interface IApplicationDbContext
     DbSet<HabitLog> HabitLogs { get; }
     DbSet<Streak> Streaks { get; }
     DbSet<Friendship> Friendships { get; }
+    DbSet<Routine> Routines { get; }
+    DbSet<RoutineHabit> RoutineHabits { get; }
+    DbSet<HabitTemplate> HabitTemplates { get; }
     DbSet<UniversityChallenge> UniversityChallenges { get; }
     DbSet<ChallengeParticipant> ChallengeParticipants { get; }
     DbSet<SyncAudit> SyncAudits { get; }

@@ -20,6 +20,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<HabitLog> HabitLogs => Set<HabitLog>();
     public DbSet<Streak> Streaks => Set<Streak>();
     public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<Routine> Routines => Set<Routine>();
+    public DbSet<RoutineHabit> RoutineHabits => Set<RoutineHabit>();
+    public DbSet<HabitTemplate> HabitTemplates => Set<HabitTemplate>();
     public DbSet<UniversityChallenge> UniversityChallenges => Set<UniversityChallenge>();
     public DbSet<ChallengeParticipant> ChallengeParticipants => Set<ChallengeParticipant>();
     public DbSet<SyncAudit> SyncAudits => Set<SyncAudit>();
@@ -86,8 +89,21 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.FrequencyType)
                 .HasColumnName("frequency_type")
-                .HasConversion<string>();
-            entity.Property(e => e.FrequencyDays).HasColumnName("frequency_days");
+                .HasConversion(
+                    v => v == FrequencyType.WeeklyDays
+                        ? "weekly_days"
+                        : v == FrequencyType.Interval
+                            ? "interval"
+                            : "daily",
+                    v => v == "weekly_days"
+                        ? FrequencyType.WeeklyDays
+                        : v == "interval"
+                            ? FrequencyType.Interval
+                            : FrequencyType.Daily
+                );
+            entity.Property(e => e.FrequencyDays)
+                .HasColumnName("frequency_days")
+                .HasDefaultValueSql("'{}'::integer[]");
             entity.Property(e => e.ColorHex).HasColumnName("color_hex").HasDefaultValue("#6366F1");
             entity.Property(e => e.IsPublic).HasColumnName("is_public").HasDefaultValue(false);
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
@@ -97,6 +113,48 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.HasOne(d => d.Profile)
                 .WithMany(p => p.Habits)
                 .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Routines Table
+        modelBuilder.Entity<Routine>(entity =>
+        {
+            entity.ToTable("routines", "public");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.Title).HasColumnName("title").IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.TimeOfDay).HasColumnName("time_of_day").HasDefaultValue("morning");
+            entity.Property(e => e.AnchorTime).HasColumnName("anchor_time");
+            entity.Property(e => e.DaysOfWeek).HasColumnName("days_of_week");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("timezone('utc'::text, now())");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("timezone('utc'::text, now())");
+
+            entity.HasOne(d => d.Profile)
+                .WithMany(p => p.Routines)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Routine Habits Table
+        modelBuilder.Entity<RoutineHabit>(entity =>
+        {
+            entity.ToTable("routine_habits", "public");
+            entity.HasKey(e => new { e.RoutineId, e.HabitId });
+            entity.Property(e => e.RoutineId).HasColumnName("routine_id");
+            entity.Property(e => e.HabitId).HasColumnName("habit_id");
+            entity.Property(e => e.SortOrder).HasColumnName("sort_order").HasDefaultValue(0);
+
+            entity.HasOne(d => d.Routine)
+                .WithMany(p => p.RoutineHabits)
+                .HasForeignKey(d => d.RoutineId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Habit)
+                .WithMany(p => p.RoutineHabits)
+                .HasForeignKey(d => d.HabitId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -159,7 +217,18 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.UserId2).HasColumnName("user_id_2");
             entity.Property(e => e.Status)
                 .HasColumnName("status")
-                .HasConversion<string>()
+                .HasConversion(
+                    v => v == FriendshipStatus.Accepted
+                        ? "accepted"
+                        : v == FriendshipStatus.Blocked
+                            ? "blocked"
+                            : "pending",
+                    v => v == "accepted"
+                        ? FriendshipStatus.Accepted
+                        : v == "blocked"
+                            ? FriendshipStatus.Blocked
+                            : FriendshipStatus.Pending
+                )
                 .HasDefaultValue(FriendshipStatus.Pending);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("timezone('utc'::text, now())");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("timezone('utc'::text, now())");
@@ -177,6 +246,32 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Habit Templates Table
+        modelBuilder.Entity<HabitTemplate>(entity =>
+        {
+            entity.ToTable("habit_templates", "public");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Title).HasColumnName("title").IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.GoalKey).HasColumnName("goal_key").HasDefaultValue("general");
+            entity.Property(e => e.Category).HasColumnName("category").HasDefaultValue("general");
+            entity.Property(e => e.LifestyleTags).HasColumnName("lifestyle_tags");
+            entity.Property(e => e.SuggestedFrequencyType).HasColumnName("suggested_frequency_type").HasDefaultValue("daily");
+            entity.Property(e => e.SuggestedFrequencyDays).HasColumnName("suggested_frequency_days");
+            entity.Property(e => e.DefaultColorHex).HasColumnName("default_color_hex").HasDefaultValue("#6366F1");
+            entity.Property(e => e.DefaultIconKey).HasColumnName("default_icon_key");
+            entity.Property(e => e.IsFeatured).HasColumnName("is_featured").HasDefaultValue(false);
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("timezone('utc'::text, now())");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("timezone('utc'::text, now())");
+
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // University Challenges Table
         modelBuilder.Entity<UniversityChallenge>(entity =>
         {
@@ -185,6 +280,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Title).HasColumnName("title").IsRequired();
             entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Category).HasColumnName("category").HasDefaultValue("general");
+            entity.Property(e => e.Visibility).HasColumnName("visibility").HasDefaultValue("public");
+            entity.Property(e => e.JoinCode).HasColumnName("join_code");
+            entity.Property(e => e.CoverImageUrl).HasColumnName("cover_image_url");
+            entity.Property(e => e.LifestyleTags).HasColumnName("lifestyle_tags");
+            entity.Property(e => e.MaxParticipants).HasColumnName("max_participants");
             entity.Property(e => e.StartDate).HasColumnName("start_date");
             entity.Property(e => e.EndDate).HasColumnName("end_date");
             entity.Property(e => e.TargetAcademicPrograms).HasColumnName("target_academic_programs");
@@ -206,6 +307,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.ChallengeId).HasColumnName("challenge_id");
             entity.Property(e => e.UserId).HasColumnName("user_id");
             entity.Property(e => e.JoinedAt).HasColumnName("joined_at").HasDefaultValueSql("timezone('utc'::text, now())");
+            entity.Property(e => e.JoinedVia).HasColumnName("joined_via").HasDefaultValue("direct");
+            entity.Property(e => e.LastActivityAt).HasColumnName("last_activity_at");
             entity.Property(e => e.ProgressCount).HasColumnName("progress_count").HasDefaultValue(0);
             entity.Property(e => e.IsCompleted).HasColumnName("is_completed").HasDefaultValue(false);
 
@@ -230,6 +333,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.DeviceId).HasColumnName("device_id").IsRequired();
             entity.Property(e => e.DeviceName).HasColumnName("device_name");
             entity.Property(e => e.AppVersion).HasColumnName("app_version");
+            entity.Property(e => e.LastSeenAt).HasColumnName("last_seen_at").HasDefaultValueSql("timezone('utc'::text, now())");
+            entity.Property(e => e.LastPulledAt).HasColumnName("last_pulled_at");
+            entity.Property(e => e.LastConflictAt).HasColumnName("last_conflict_at");
             entity.Property(e => e.LastSuccessfulSyncAt).HasColumnName("last_successful_sync_at").HasDefaultValueSql("timezone('utc'::text, now())");
 
             entity.HasIndex(e => new { e.UserId, e.DeviceId }).IsUnique();
@@ -241,3 +347,5 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         });
     }
 }
+
+

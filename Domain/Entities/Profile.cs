@@ -19,6 +19,7 @@ public class Profile
     public ICollection<Habit> Habits { get; set; } = new List<Habit>();
     public ICollection<HabitLog> HabitLogs { get; set; } = new List<HabitLog>();
     public ICollection<Streak> Streaks { get; set; } = new List<Streak>();
+    public ICollection<Routine> Routines { get; set; } = new List<Routine>();
     public ICollection<ChallengeParticipant> ChallengeParticipants { get; set; } = new List<ChallengeParticipant>();
     public ICollection<SyncAudit> SyncAudits { get; set; } = new List<SyncAudit>();
 }

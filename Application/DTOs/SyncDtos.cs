@@ -43,6 +43,16 @@ public record StreakSyncDto(
     DateTime UpdatedAt
 );
 
+public record SyncConflictDto(
+    string EntityType,
+    Guid EntityId,
+    string Resolution,
+    DateTime ServerUpdatedAt,
+    DateTime? ClientUpdatedAt,
+    Dictionary<string, object?> ServerSnapshot,
+    Dictionary<string, object?> ClientSnapshot
+);
+
 public record SyncRequestDto(
     DateTime LastSyncedAt,
     string DeviceId,
@@ -58,5 +68,6 @@ public record SyncResponseDto(
     List<HabitSyncDto> Habits,
     List<HabitLogSyncDto> HabitLogs,
     List<FriendshipSyncDto> Friendships,
-    List<StreakSyncDto> Streaks
+    List<StreakSyncDto> Streaks,
+    List<SyncConflictDto> Conflicts
 );

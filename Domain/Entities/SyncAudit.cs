@@ -12,5 +12,8 @@ public class SyncAudit
     public string DeviceId { get; set; } = null!;
     public string? DeviceName { get; set; }
     public string? AppVersion { get; set; }
+    public DateTime LastSeenAt { get; set; }
+    public DateTime? LastPulledAt { get; set; }
+    public DateTime? LastConflictAt { get; set; }
     public DateTime LastSuccessfulSyncAt { get; set; }
 }
